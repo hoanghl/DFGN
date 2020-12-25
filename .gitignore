@@ -1,0 +1,9 @@
+backup_files
+testing
+__pycache__
+.idea
+
+*.json
+*.pkl.tz
+
+.DS_Store
