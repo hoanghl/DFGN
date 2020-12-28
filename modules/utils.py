@@ -7,6 +7,9 @@ logging.basicConfig(format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%
 logging.getLogger().setLevel(logging.INFO)
 
 
+########################################################
+# Functions to deal with `pkl` files
+########################################################
 def load_object(path) -> object:
     """
     Load object from pickle gzip file
@@ -47,3 +50,19 @@ def save_object(path, obj_file) -> object:
 
     with gzip.open(path, 'w+') as dat_file:
         pickle.dump(obj_file, dat_file)
+
+
+########################################################
+# Simple file manipulating operations
+########################################################
+def check_file_existence(path: str) -> bool:
+    """
+    Check whether file given by `path` exists.
+    Args:
+        path (str): path of file to be checked
+
+    Returns:
+        bool value stating the existence of file
+    """
+
+    return os.path.isfile(path)

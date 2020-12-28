@@ -1,9 +1,7 @@
 from multiprocessing import Pool
 import threading
-import logging
 import json
 import sys
-import os
 import re
 
 from torch.utils.data import Dataset, random_split
@@ -12,12 +10,9 @@ from tqdm import tqdm
 import spacy
 import torch
 
-from utils import save_object
-from configs import args
+from modules.utils import save_object, check_file_existence
+from configs import args, logging
 
-
-logging.basicConfig(format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-logging.getLogger().setLevel(logging.INFO)
 
 BERT_PATH       = f"{args.init_path}/_pretrained/BERT/{args.bert_model}/"
 BERT_TOKENIZER  = f"{args.init_path}/_pretrained/BERT/{args.bert_model}-vocab.txt"
@@ -57,8 +52,10 @@ class PreprocessingHelper:
 
 
         self.preprocessed_datapoint = {
-            'sentence'  : torch.FloatTensor(tokens),
-            'score'     : torch.FloatTensor(data_point['score'])
+            '_id'           : data_point['_id'],
+            '_id_context'   : data_point['_id_context'],
+            'sentence'      : torch.FloatTensor(tokens),
+            'score'         : torch.FloatTensor(data_point['score'])
         }
 
 
@@ -110,8 +107,8 @@ def generate_train_datasets():
     ## Check whether files "data_dev.json" and "data_train.json"
     ## have been created
     ###################
-    if not os.path.isfile(path_data_train) or\
-        not os.path.isfile(path_data_dev):
+    if not check_file_existence(path_data_train) or \
+            not check_file_existence(path_data_dev):
         ## If those files have not been created, create them first
 
         PATH = f"{args.init_path}/_data/QA/HotpotQA/"
@@ -128,19 +125,21 @@ def generate_train_datasets():
             ############################
             logging.info(f"{file} - Read file and create samples")
 
-            if not os.path.isfile(path_data):
+            if not check_file_existence(path_data):
                 raise ValueError(f"Path {path_data} not existed.")
 
             samples = []
             with open(path_data, 'r') as dat_file:
                 for datapoint in json.load(dat_file):
                     contexts = []
-                    for context in datapoint['context']:
+                    for nth_context, context in enumerate(datapoint['context']):
                         samples.append({
-                            'question': datapoint['question'],
-                            'support_fact': [fact[0] for fact in datapoint['supporting_facts']],
-                            'context': ''.join(context[1]),
-                            'score': 0
+                            '_id'           : datapoint['_id'],
+                            '_id_context'   : nth_context,
+                            'question'      : datapoint['question'],
+                            'support_fact'  : [fact[0] for fact in datapoint['supporting_facts']],
+                            'context'       : ''.join(context[1]),
+                            'score'         : 0
                         })
 
             ############################
@@ -183,15 +182,15 @@ def generate_train_datasets():
         with open(path_data_train, 'r') as dat_file:
             data_raw_train = [
                 {
-                    'sentence': x['question'] + " " + x['context'],
-                    'score': x['score']
+                    'sentence'  : x['question'] + " " + x['context'],
+                    'score'     : x['score']
                 } for x in json.load(dat_file)
             ]
         with open(path_data_dev, 'r') as dat_file:
             data_raw_dev = [
                 {
-                    'sentence': x['question'] + " " + x['context'],
-                    'score': x['score']
+                    'sentence'  : x['question'] + " " + x['context'],
+                    'score'     : x['score']
                 } for x in json.load(dat_file)
             ]
 
@@ -201,12 +200,12 @@ def generate_train_datasets():
         logging.info("2. Create dataset")
 
         ### Create Dataset object
-        dataset_dev = CustomizedDataset(data_raw_dev)
-        dataset_train = CustomizedDataset(data_raw_train)
+        dataset_dev     = CustomizedDataset(data_raw_dev)
+        dataset_train   = CustomizedDataset(data_raw_train)
 
         ## Split training set into training and testing
-        length_train = int(RATIO_TRAIN_TEST * len(data_raw_train))
-        length_test = len(data_raw_train) - length_train
+        length_train    = int(RATIO_TRAIN_TEST * len(data_raw_train))
+        length_test     = len(data_raw_train) - length_train
         dataset_train, dataset_test = random_split(dataset_train, [length_train, length_test])
 
         ### Back up pickle file
@@ -217,7 +216,4 @@ def generate_train_datasets():
 
 
 if __name__ == "__main__":
-    if args.task == "selectparas_createData":
-        generate_train_datasets()
-    else:
-        logging.error("Incorrect task.")
+    generate_train_datasets()

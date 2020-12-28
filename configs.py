@@ -2,6 +2,7 @@
 This file processes arguments and configs
 '''
 import argparse
+import logging
 
 import torch
 
@@ -23,10 +24,13 @@ parser.add_argument("--bert_model", type=str, default="bert-base-uncased",
 parser.add_argument("--max_seq_length", type=int, default=512,
                     help="Max length for each sequence, max length equal max length of BERT, more than this number"
                          "will be truncated, less will be padded.")
-parser.add_argument("--task", type=str,
-                    help="Select task to do")
+parser.add_argument("--task", type=str, help="Select task to do")
 parser.add_argument("--device", type=str, default="default", choices=["default", "cpu", "cuda"],
                     help="Select device to run")
+
+## Nhóm các argument liên quan tới path của các file
+parser.add_argument("--path_selectedQueryContext", type=str,
+                    help="Path to file 'selected_query_context.json'")
 
 # args = parser.parse_args()
 args, _ = parser.parse_known_args()
@@ -56,3 +60,19 @@ if args.device == "default":
     args.device     = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 else:
     args.device = torch.device(args.device)
+
+
+###############################
+# Cấu hình logging
+###############################
+logging.basicConfig(format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.getLogger().setLevel(logging.INFO)
+
+
+###############################
+# Cấu hình các biến config
+###############################
+configs = {
+    ## threshold used to select golden passages
+    'DELTA' : 0.1,
+}

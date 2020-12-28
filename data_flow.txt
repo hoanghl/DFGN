@@ -1,0 +1,71 @@
+1. select_paras    
+    generate_train_datasets (1):
+
+        Input   : original JSON Hotpot train/test 
+        Output  : 
+            Nội dung: data dùng để train cho Paras Selector
+            Tên file: data_train.json, data_dev.json
+            Ví dụ:
+            [
+                {
+                    "_id": "5a8b57f25542995d1e6f1371",
+                    "_id_context": 0,
+                    "question": "Were Scott Derrickson and Ed Wood of the same nationality?",
+                    "support_fact": [
+                        "Scott Derrickson",
+                        "Ed Wood"
+                    ],
+                    "context": "Adam Collis is an American filmmaker and actor. He attended the Duke University from 1986 to 1990 and the University of California, Los Angeles from 2007 to 2010. He also studied cinema at the University of Southern California from 1991 to 1997. Collis first work was the assistant director for the Scott Derrickson's short \"Love in the Ruins\" (1995). In 1998, he played \"Crankshaft\" in Eric Koyanagi's \"Hundred Percent\".",
+                    "score": 1
+                },
+            ]
+        
+    generate_train_datasets (2):
+        Input   : data_train.json, data_dev.json
+        Output  : 
+            Nội dung: Dataset object đã được preprocessing và tạo thành các tensor
+            Tên file: dataset_train.pkl.gz, dataset_dev.pkl.gz, dataset_test.pkl.gz
+            Ví dụ:
+            [
+                {
+                    '_id'           : data_point['_id'],
+                    '_id_context'   : data_point['_id_context'],
+                    'sentence'      : torch.FloatTensor(tokens),
+                    'score'         : torch.FloatTensor(data_point['score'])
+                },
+            ]
+
+    Para_Selector (train):
+        Input   : dataset_train.pkl.gz, dataset_dev.pkl.gz, dataset_test.pkl.gz
+        Output  : Nothing vì đây chỉ là train
+    
+    Para_Selector (inference):
+        Input   : dataset_train.pkl.gz, dataset_dev.pkl.gz, dataset_test.pkl.gz
+        Output  : 
+            Nội dung: các query cùng với một paragraph trong context mà đã được đánh số
+            Tên file: select_data_train.pkl.gz, select_data_dev.pkl.gz
+            Ví dụ:
+            [
+                {
+                    '_id'               : data_point['_id'],
+                    '_id_context'       : data_point['_id_context'],
+                    'predictted_score   :  float 
+                },
+            ]
+
+
+2. encoding
+    encode (prepare_data):
+        Input   : select_data_train.pkl.gz, select_data_dev.pkl.gz, select_data_test.pkl.gz
+        Output  : 
+            Nội dung: Query đã được processing, context kết hợp từ các paragraph và đã được processing, answer ở dạng plain text
+            Tên file: data_train.pkl.gz, data_dev.pkl.gz, data_test.pkl.gz
+            Ví dụ:
+            [
+                {
+                    '_id'       : data_point['_id'],
+                    'query'     : torch.FloatTensor(tokens),
+                    'context'   : torch.FloatTensor(data_point['score']),
+                    'answer'    : string
+                },
+            ]

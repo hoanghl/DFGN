@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils.nn import LSTM, Linear
+from modules.encoding.BiDAF.nn import LSTM, Linear
 
 
 class BiDAF(nn.Module):

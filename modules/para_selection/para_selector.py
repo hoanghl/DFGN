@@ -6,7 +6,7 @@ import torch.nn.functional as torch_f
 import torch.optim as torch_optim
 import torch
 
-from utils import load_object
+from modules.utils import load_object, save_object
 from configs import args
 
 logging.basicConfig(format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -34,15 +34,11 @@ class Para_Selector:
         logging.info("1. Prepare data and model")
 
         ## Load data
-        path_data_train = f"{args.init_path}/DFGN-hoangle/backup_files/select_paras/dataset_train.pkl.gz"
-        path_data_dev   = f"{args.init_path}/DFGN-hoangle/backup_files/select_paras/dataset_dev.pkl.gz"
-        path_data_test  = f"{args.init_path}/DFGN-hoangle/backup_files/select_paras/dataset_test.pkl.gz"
+        path_data_train = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_train.pkl.gz"
+        path_data_dev   = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_dev.pkl.gz"
+        path_data_test  = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_test.pkl.gz"
 
         ## Create iterator for each dataset
-        # iterator_train  = CustomizedDataLoader(path_data_train, args.batch_size, args.n_cpus)
-        # iterator_dev    = CustomizedDataLoader(path_data_dev, args.batch_size, args.n_cpus)
-        # iterator_test   = CustomizedDataLoader(path_data_test, args.batch_size, args.n_cpus)
-
         iterator_train  = self.get_iterator(path_data_train)
         iterator_dev    = self.get_iterator(path_data_dev)
         iterator_test   = self.get_iterator(path_data_test)
@@ -90,7 +86,9 @@ class Para_Selector:
         ##################################
         ## 4. Store model
         ##################################
-        logging.info("4. Test with test dataset")
+        logging.info("4. Store model")
+
+        torch.save(model.state_dict(), "./backup_files/select_paras/paras_selector.pt")
 
 
     def cal_accuracy(self, logist, target):
@@ -173,26 +171,100 @@ class Para_Selector:
 
         torch.save(model.state_dict(), path_model)
 
-
     def get_iterator(self, path):
         dataset = [
             {
-                'sentence': torch.from_numpy(data_point['sentence']),
-                'score': torch.from_numpy(data_point['score']),
+                'sentence'  : torch.from_numpy(data_point['sentence']),
+                'score'     : torch.from_numpy(data_point['score']),
             }
             for data_point in load_object(path)
         ]
 
         return DataLoader(dataset, batch_size=args.batch_size, num_workers=args.n_cpus)
 
+
     ##################################################
-    # Methods serving training purpose
+    # Methods serving inferring purpose
     ##################################################
-    def inference(self, model):
-        pass
+    def trigger_inference(self):
+        """
+        Trigger inferring process
+        """
+        ##################################
+        ## 1. Read 3 files 'dataset_.pkl.gz' and
+        ## reconstruct DataLoader from those
+        ##################################
+        logging.info("1. Prepare data and model")
+
+        ## Load data
+        path_data_train = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_train.pkl.gz"
+        path_data_dev   = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_dev.pkl.gz"
+        path_data_test  = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_test.pkl.gz"
+
+        ## Create iterator for each dataset
+        iterator_train  = self.get_iterator(path_data_train)
+        iterator_dev    = self.get_iterator(path_data_dev)
+        iterator_test   = self.get_iterator(path_data_test)
+        logging.info("=> Successfully load data and create iterators")
+
+
+        ##################################
+        ## 2. Load model
+        ##################################
+        model = BertForSequenceClassification.from_pretrained(BERT_PATH) \
+            .to(args.device)
+        model.load_state_dict(torch.load("./backup_files/select_paras/paras_selector.pt"))
+
+
+        ##################################
+        ## 3. Start inferring and store data
+        ##################################
+        selected_data_train = self.inference(model, iterator_train)
+        selected_data_train.extend(self.inference(model, iterator_test))
+
+        selected_data_dev   = self.inference(model, iterator_dev)
+
+        save_object("./backup_files/select_paras/selected_data_train.pkl.gz",
+                    selected_data_train)
+        save_object("./backup_files/select_paras/selected_data_dev.pkl.gz",
+                    selected_data_dev)
+
+
+
+    def inference(self, model, iterator_inference):
+        ## Following variable contains question and c
+        results = list()
+
+        model.eval()
+
+        with torch.no_grad():
+            for batch in iterator_inference:
+                src = batch['sentence'].to(args.device)
+
+                logits = model(src, labels=None, return_dict=True).logits
+
+                ### Convert logits value to usable ones
+                scores = torch_f.softmax(logits, dim=1)[:, 0]
+
+                ### Save to 'results'
+
+                for datapoint, score in zip(batch, scores):
+                    results.append({
+                        '_id'           : datapoint['_id'],
+                        '_id_context'   : datapoint['_id_context'],
+                        'score'         : score
+                    })
+
+        return results
 
 
 if __name__ == '__main__':
     paras_seletor = Para_Selector()
 
-    paras_seletor.trigger_train()
+    if args.task == "selectparas_train":
+        paras_seletor.trigger_train()
+    elif args.task == "selectparas_inference":
+        paras_seletor.trigger_inference()
+    else:
+        logging.error("Err: Mismatch 'task' argument.")
+

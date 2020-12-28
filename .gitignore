@@ -7,3 +7,5 @@ __pycache__
 *.pkl.tz
 
 .DS_Store
+
+._*
