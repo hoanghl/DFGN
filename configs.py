@@ -7,8 +7,6 @@ import logging
 import torch
 
 
-FLAG = "JUPYTER"
-
 ###############################
 # Đọc các argument từ CLI
 ###############################
@@ -28,17 +26,9 @@ parser.add_argument("--task", type=str, help="Select task to do")
 parser.add_argument("--device", type=str, default="default", choices=["default", "cpu", "cuda"],
                     help="Select device to run")
 
-## Nhóm các argument liên quan tới path của các file
-parser.add_argument("--path_selectedQueryContext", type=str,
-                    help="Path to file 'selected_query_context.json'")
-
 # args = parser.parse_args()
 args, _ = parser.parse_known_args()
 
-
-if FLAG == "JUPYTER":
-    args.working_place  = "local"
-    args.bert_model     = "bert-base-uncased"
 
 ###############################
 # Thêm các argument

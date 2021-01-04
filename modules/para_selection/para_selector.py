@@ -90,7 +90,6 @@ class Para_Selector:
 
         torch.save(model.state_dict(), "./backup_files/select_paras/paras_selector.pt")
 
-
     def cal_accuracy(self, logist, target):
         """
         Calculate accuracy during training and evaluating

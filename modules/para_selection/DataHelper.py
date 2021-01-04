@@ -182,15 +182,19 @@ def generate_train_datasets():
         with open(path_data_train, 'r') as dat_file:
             data_raw_train = [
                 {
-                    'sentence'  : x['question'] + " " + x['context'],
-                    'score'     : x['score']
+                    '_id'           : x['_id'],
+                    '_id_context'   : x['_id_context'],
+                    'sentence'      : x['question'] + " " + x['context'],
+                    'score'         : x['score']
                 } for x in json.load(dat_file)
             ]
         with open(path_data_dev, 'r') as dat_file:
             data_raw_dev = [
                 {
-                    'sentence'  : x['question'] + " " + x['context'],
-                    'score'     : x['score']
+                    '_id'           : x['_id'],
+                    '_id_context'   : x['_id_context'],
+                    'sentence'      : x['question'] + " " + x['context'],
+                    'score'         : x['score']
                 } for x in json.load(dat_file)
             ]
 

@@ -22,7 +22,8 @@ class BiDAF(nn.Module):
         # 2. Word Embedding Layer
         # initialize word embedding with GloVe
         # NOTE: [Hoang Le]: Bert can input into this
-        self.word_emb = nn.Embedding.from_pretrained(pretrained, freeze=True)
+        # self.word_emb = nn.Embedding.from_pretrained(pretrained, freeze=True)
+        self.word_emb   = pretrained
 
         # highway network
         assert self.args.hidden_size * 2 == (self.args.char_channel_size + self.args.word_dim)

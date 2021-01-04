@@ -56,16 +56,18 @@
 
 2. encoding
     encode (prepare_data):
-        Input   : select_data_train.pkl.gz, select_data_dev.pkl.gz, select_data_test.pkl.gz
+        Input   : select_data_train.pkl.gz, select_data_dev.pkl.gz
         Output  : 
             Nội dung: Query đã được processing, context kết hợp từ các paragraph và đã được processing, answer ở dạng plain text
-            Tên file: data_train.pkl.gz, data_dev.pkl.gz, data_test.pkl.gz
+            Tên file: data_train.pkl.gz, data_dev.pkl.gz
             Ví dụ:
             [
                 {
-                    '_id'       : data_point['_id'],
-                    'query'     : torch.FloatTensor(tokens),
-                    'context'   : torch.FloatTensor(data_point['score']),
-                    'answer'    : string
+                    '_id'           : data_point['_id'],
+                    'query'         : torch.FloatTensor(tokens),
+                    'context'       : torch.FloatTensor(data_point['context']),
+                    'query_plain"   : str,
+                    'context_plain' : str,
+                    'answer'        : str
                 },
             ]
