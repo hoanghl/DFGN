@@ -1,4 +1,5 @@
-from multiprocessing import Pool
+# from multiprocessing import Pool
+import multiprocessing
 import threading
 import json
 import sys
@@ -10,9 +11,11 @@ from tqdm import tqdm
 import spacy
 import torch
 
-from modules.utils import save_object, check_file_existence
+from modules.utils import save_object, check_file_existence, ParallelHelper
 from configs import args, logging
 
+if args.working_place != "local":
+    torch.multiprocessing.set_sharing_strategy('file_system')
 
 BERT_PATH       = f"{args.init_path}/_pretrained/BERT/{args.bert_model}/"
 BERT_TOKENIZER  = f"{args.init_path}/_pretrained/BERT/{args.bert_model}-vocab.txt"
@@ -54,8 +57,11 @@ class PreprocessingHelper:
         self.preprocessed_datapoint = {
             '_id'           : data_point['_id'],
             '_id_context'   : data_point['_id_context'],
-            'sentence'      : torch.FloatTensor(tokens),
-            'score'         : torch.FloatTensor(data_point['score'])
+            ## BUG: Error occurs by 2 lines below.
+            # 'sentence'      : torch.FloatTensor(tokens),
+            # 'score'         : torch.FloatTensor(data_point['score'])
+            'sentence'      : tokens,
+            'score'         : data_point['score']
         }
 
 
@@ -70,15 +76,14 @@ class PreprocessingHelper:
         return tokens
 
 
+def f_kernel(data: list, queue):
+    for data_point in data:
+        queue.put(PreprocessingHelper(data_point).preprocessed_datapoint)
+
+
 class CustomizedDataset(Dataset):
     def __init__(self, dataset_raw):
-
-        with Pool(args.n_cpus) as p:
-            self.dataset = list(tqdm(p.imap(self.f_process_datapoint, dataset_raw), total=len(dataset_raw)))
-
-
-    def f_process_datapoint(self, data_point):
-        return PreprocessingHelper(data_point).preprocessed_datapoint
+        self.dataset = ParallelHelper(f_kernel, dataset_raw, args.n_cpus).launch()
 
     def __len__(self):
         return len(self.dataset)
@@ -205,6 +210,9 @@ def generate_train_datasets():
 
         ### Create Dataset object
         dataset_dev     = CustomizedDataset(data_raw_dev)
+        save_object("./backup_files/select_paras/dataset_dev.pkl.gz", dataset_dev)
+        logging.info("Successfully created dataset dev.")
+
         dataset_train   = CustomizedDataset(data_raw_train)
 
         ## Split training set into training and testing
@@ -214,7 +222,6 @@ def generate_train_datasets():
 
         ### Back up pickle file
         save_object("./backup_files/select_paras/dataset_train.pkl.gz", dataset_train)
-        save_object("./backup_files/select_paras/dataset_dev.pkl.gz", dataset_dev)
         save_object("./backup_files/select_paras/dataset_test.pkl.gz", dataset_test)
         logging.info("Successfully store into pickle files.")
 

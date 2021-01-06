@@ -94,6 +94,17 @@ def sentence2tokens(sentence: str) -> object:
     return torch.FloatTensor(tokens)
 
 
+def sentence2chars(sentence: str) -> object:
+    """
+    Convert 'sentence' to char
+    Args:
+        sentence ():
+
+    Returns:
+
+    """
+
+
 if __name__ == '__main__':
     sample = {
         "question": "Were Scott Derrickson and Ed Wood of the same nationality?",

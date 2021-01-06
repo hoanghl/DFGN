@@ -1,7 +1,10 @@
+import multiprocessing
 import logging
 import pickle
 import gzip
 import os
+
+from tqdm import tqdm
 
 logging.basicConfig(format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logging.getLogger().setLevel(logging.INFO)
@@ -46,7 +49,7 @@ def save_object(path, obj_file) -> object:
         try:
             os.makedirs(os.path.dirname(path))
         except FileExistsError:
-            logging.warning(f"=> Folder {path} exists.")
+            logging.warning(f"=> Folder {os.path.dirname(path)} exists.")
 
     with gzip.open(path, 'w+') as dat_file:
         pickle.dump(obj_file, dat_file)
@@ -66,3 +69,51 @@ def check_file_existence(path: str) -> bool:
     """
 
     return os.path.isfile(path)
+
+
+class ParallelHelper:
+    def __init__(self, f_task, data: list, n_cores: int = 4, *args):
+        self.n_data = len(data)
+
+        self.queue  = multiprocessing.Queue()
+        # self.pbar   = tqdm(total=self.n_data)
+
+        self.jobs = list()
+        for ith in range(n_cores):
+            low_bound = ith * self.n_data // n_cores
+            hi_bound = (ith + 1) * self.n_data // n_cores \
+                if ith < (n_cores - 1) else self.n_data
+
+            p = multiprocessing.Process(target=f_task,
+                                        args=(data[low_bound: hi_bound],
+                                              self.queue, *args))
+            self.jobs.append(p)
+
+    def launch(self) -> list:
+        """
+        Launch parallel process
+        Returns: a list after running parallel task
+
+        """
+        dataset = list()
+
+        for job in self.jobs:
+            job.start()
+
+        cnt = 0
+        import sys
+        while cnt < self.n_data:
+            while not self.queue.empty():
+                dataset.append(self.queue.get())
+                cnt += 1
+                print(f"{cnt} - {sys.getsizeof(dataset)}")
+
+                # self.pbar.update()
+
+        # self.pbar.close()
+
+        for job in self.jobs:
+            job.join()
+
+
+        return dataset

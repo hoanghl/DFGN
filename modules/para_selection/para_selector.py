@@ -179,7 +179,7 @@ class Para_Selector:
             for data_point in load_object(path)
         ]
 
-        return DataLoader(dataset, batch_size=args.batch_size, num_workers=args.n_cpus)
+        return DataLoader(dataset, batch_size=args.batch_size, num_workers=0)
 
 
     ##################################################
@@ -227,8 +227,6 @@ class Para_Selector:
                     selected_data_train)
         save_object("./backup_files/select_paras/selected_data_dev.pkl.gz",
                     selected_data_dev)
-
-
 
     def inference(self, model, iterator_inference):
         ## Following variable contains question and c

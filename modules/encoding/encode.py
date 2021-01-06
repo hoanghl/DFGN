@@ -22,7 +22,6 @@ class CustomDataset(Dataset):
         return self.dataset[item]
 
 
-
 def get_items_by_indx(list_items: list, indx: list) -> list:
     """
     Get items in `list_items` by list of `indx`
@@ -95,12 +94,14 @@ def encode_query_context(threshold: float):
 
             ### Append vào list 'results'
             results.append({
-                '_id'           : datapoint['_id'],
-                'query'         : sentence2tokens(datapoint['question']),
-                'context'       : sentence2tokens(context),
-                'query_plain'   : datapoint['question'],
-                'context_plain' : context,
-                'answer'        : datapoint['answer']
+                '_id'       : datapoint['_id'],
+                'c_plain'   : context,
+                'c_word'    : sentence2tokens(context),
+                'c_char'    : None,
+                'q_plain'   : datapoint['question'],
+                'q_word'    : sentence2tokens(datapoint['question']),
+                'q_char'    : None,
+                'answer'    : datapoint['answer']
             })
 
         return results
@@ -118,11 +119,9 @@ def encode_query_context(threshold: float):
     ###################################
     ## Create dataset
     iterator_train   = DataLoader(CustomDataset(dataset_train),
-                                  batch_size=args.batch_size,
-                                  num_workers=args.n_cpus)
+                                  batch_size=args.batch_size)
     iterator_dev     = DataLoader(CustomDataset(dataset_dev),
-                                  batch_size=args.batch_size,
-                                  num_workers=args.n_cpus)
+                                  batch_size=args.batch_size)
 
     ## Let data pass through BERT
 

@@ -3,6 +3,7 @@ This file processes arguments and configs
 '''
 import argparse
 import logging
+import sys
 
 import torch
 
@@ -40,6 +41,11 @@ elif args.working_place == "rtx":
     args.init_path  = "/home/ubuntu/hoanglh88/works"
 elif args.working_place == "dgx":
     args.init_path  = "/home/ubuntu"
+elif args.working_place == "local2":
+    args.init_path = "/home/tommy/Projects/VinAI"
+else:
+    print("Err: Invalid init path. Exiting..")
+    sys.exit(1)
 
 ## args = bert_model
 if args.bert_model == "":
