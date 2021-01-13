@@ -20,9 +20,6 @@ parser.add_argument("--n_cpus", type=int, default=4)
 parser.add_argument("--n_epochs", type=int, default=10)
 parser.add_argument("--bert_model", type=str, default="bert-base-uncased",
                     help="default pretrain BERT model")
-parser.add_argument("--max_seq_length", type=int, default=512,
-                    help="Max length for each sequence, max length equal max length of BERT, more than this number"
-                         "will be truncated, less will be padded.")
 parser.add_argument("--task", type=str, help="Select task to do")
 parser.add_argument("--device", type=str, default="default", choices=["default", "cpu", "cuda"],
                     help="Select device to run")
@@ -38,7 +35,7 @@ args, _ = parser.parse_known_args()
 if args.working_place == "local":
     args.init_path  = "/Users/hoangle/Projects/VinAI"
 elif args.working_place == "rtx":
-    args.init_path  = "/home/ubuntu/hoanglh88/works"
+    args.init_path  = "/home/ubuntu/projects"
 elif args.working_place == "dgx":
     args.init_path  = "/home/ubuntu"
 elif args.working_place == "local2":
@@ -71,4 +68,9 @@ logging.getLogger().setLevel(logging.INFO)
 configs = {
     ## threshold used to select golden passages
     'DELTA' : 0.1,
+
+    ## maximum number of characters to be tokenized
+    'MAX_SEQ_LEN_CH': 1024,
+    ## maximum number of words to be tokenized
+    'MAX_SEQ_LEN_W': 512,
 }

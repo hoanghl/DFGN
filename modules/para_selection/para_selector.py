@@ -4,9 +4,11 @@ from transformers import BertForSequenceClassification
 from torch.utils.data import DataLoader
 import torch.nn.functional as torch_f
 import torch.optim as torch_optim
+from tqdm import tqdm
 import torch
 
 from modules.utils import load_object, save_object
+from modules.encoding.utils import concat_tensor
 from configs import args
 
 logging.basicConfig(format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -114,8 +116,9 @@ class Para_Selector:
 
         accum_loss, accum_accuracy = 0, 0
 
-        for batch in iterator_train:
-            src             = batch['sentence'].to(args.device)
+
+        for batch in tqdm(iterator_train):
+            src             = concat_tensor(batch['sentence']).to(args.device)
             trg             = batch['score'].to(args.device)
 
             optimizer.zero_grad()
@@ -126,8 +129,9 @@ class Para_Selector:
             accuracy        = self.cal_accuracy(outputs.logits, trg)
 
 
-            loss.backward()
+            loss.sum().backward()
             optimizer.step()
+
 
             accum_loss      += loss
             accum_accuracy  += accuracy
@@ -145,8 +149,8 @@ class Para_Selector:
 
         accum_loss, accum_accuracy = 0, 0
         with torch.no_grad():
-            for batch in iterator_dev:
-                src             = batch['sentence'].to(args.device)
+            for batch in tqdm(iterator_dev):
+                src             = concat_tensor(batch['sentence']).to(args.device)
                 trg             = batch['score'].to(args.device)
 
                 outputs         = model(src, labels=trg, return_dict=True)
@@ -173,8 +177,8 @@ class Para_Selector:
     def get_iterator(self, path):
         dataset = [
             {
-                'sentence'  : torch.from_numpy(data_point['sentence']),
-                'score'     : torch.from_numpy(data_point['score']),
+                'sentence'  : data_point['sentence'],
+                'score'     : data_point['score'],
             }
             for data_point in load_object(path)
         ]
@@ -264,4 +268,3 @@ if __name__ == '__main__':
         paras_seletor.trigger_inference()
     else:
         logging.error("Err: Mismatch 'task' argument.")
-

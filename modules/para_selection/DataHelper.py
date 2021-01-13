@@ -20,7 +20,7 @@ if args.working_place != "local":
 BERT_PATH       = f"{args.init_path}/_pretrained/BERT/{args.bert_model}/"
 BERT_TOKENIZER  = f"{args.init_path}/_pretrained/BERT/{args.bert_model}-vocab.txt"
 
-BERT_tokenizer  = BertTokenizer.from_pretrained(BERT_PATH, local_files_only=True)
+BERT_tokenizer  = BertTokenizer.from_pretrained(BERT_PATH, local_files_only=False)
 nlp             = spacy.load("en_core_web_sm")
 
 TOKEN_INIT      = BERT_tokenizer.cls_token
@@ -202,6 +202,7 @@ def generate_train_datasets():
                     'score'         : x['score']
                 } for x in json.load(dat_file)
             ]
+
 
         ##############################
         ### Create dataset

@@ -1,21 +1,19 @@
 """ This file contains common functions for modules in
 encoding query and context """
 
-from torch.utils.data import Dataset, random_split
+from operator import itemgetter
+
 from transformers import BertTokenizer
-from tqdm import tqdm
-import spacy
 import torch
+import spacy
 
-from modules.utils import save_object, check_file_existence
-
-from configs import args, logging
+from configs import args, configs
 
 
 BERT_PATH       = f"{args.init_path}/_pretrained/BERT/{args.bert_model}/"
 BERT_TOKENIZER  = f"{args.init_path}/_pretrained/BERT/{args.bert_model}-vocab.txt"
 
-BERT_tokenizer  = BertTokenizer.from_pretrained(BERT_PATH, local_files_only=True)
+BERT_tokenizer  = BertTokenizer.from_pretrained(BERT_PATH, local_files_only=False)
 nlp             = spacy.load("en_core_web_sm")
 
 
@@ -78,7 +76,7 @@ def sentence2tokens(sentence: str) -> object:
     Args:
         sentence (str): Sentence to be tokenized
 
-    Returns: Torch FloatTensor
+    Returns: list of tokens
     """
     ## Tokenize
     doc = nlp(sentence)
@@ -87,22 +85,59 @@ def sentence2tokens(sentence: str) -> object:
     ## Convert token to id
     tokens = BERT_tokenizer.convert_tokens_to_ids(tokens)
 
-    ## Truncating and Padding
-    tokens = tokens[:args.max_seq_length]
-    tokens.extend([BERT_tokenizer.pad_token_id for _ in range(args.max_seq_length - len(tokens))])
+    ## Truncating/Padding
+    tokens = tokens[:configs['MAX_SEQ_LEN_W']]
+    tokens.extend([BERT_tokenizer.pad_token_id
+                   for _ in range(configs['MAX_SEQ_LEN_W'] - len(tokens))])
 
-    return torch.FloatTensor(tokens)
+    return tokens
 
 
 def sentence2chars(sentence: str) -> object:
     """
-    Convert 'sentence' to char
+    Tokenized 'sentence' to characters, and convert characters
+    to Unicode
     Args:
-        sentence ():
+        sentence (str): sentence to be tokenized
 
-    Returns:
+    Returns: list of tokens
 
     """
+    ## Tokenize and convert to ID (ID is order in Unicode)
+    tokens = list(map(lambda x: ord(x), list(sentence)))
+    
+    ## Truncate/Padding
+    tokens = tokens[:configs['MAX_SEQ_LEN_CH']]
+    tokens.extend([0 for _ in range(configs['MAX_SEQ_LEN_CH'] - len(tokens))])
+
+    return result
+
+
+def get_items_by_indx(list_items: list, indx: list) -> list:
+    """
+    Get items in `list_items` by list of `indx`
+    Args:
+        list_items (list): list of items
+        indx (list): list of indices
+
+    Returns:
+        list of items
+    """
+    return itemgetter(*indx)(list_items)
+
+
+def concat_tensor(tensors: list) -> torch.tensor:
+    """
+    Concatenate vertically list of tensors together with
+    reshape it
+    Args:
+        tensors (list): list of tensors to be stacked
+
+    Returns: Single tensor
+
+    """
+    tensor = torch.vstack(tensors)
+    return torch.transpose(tensor, 0, 1)
 
 
 if __name__ == '__main__':

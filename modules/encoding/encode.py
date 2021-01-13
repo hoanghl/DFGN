@@ -1,11 +1,11 @@
-from operator import itemgetter
+
 import json
 
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 
 from modules.utils import save_object, load_object, check_file_existence
-from modules.encoding.utils import sentence2tokens
+from modules.encoding.utils import *
 from configs import args, logging, configs
 
 
@@ -20,19 +20,6 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, item):
         return self.dataset[item]
-
-
-def get_items_by_indx(list_items: list, indx: list) -> list:
-    """
-    Get items in `list_items` by list of `indx`
-    Args:
-        list_items (list): list of items
-        indx (list): list of indices
-
-    Returns:
-        list of items
-    """
-    return itemgetter(*indx)(list_items)
 
 
 def encode_query_context(threshold: float):
@@ -50,14 +37,18 @@ def encode_query_context(threshold: float):
     ## Read original JSON files and saved pkl.gz file
     ## to form data points
     ###################################
-    path_original_train = ""
-    path_original_dev   = ""
-    path_saved_train    = ""
-    path_saved_dev      = ""
+    ## Original files là những file dùng để feed vào model Paras Selector
+    path_original_train = f"{args.init_path}/DFGN/backup_files/select_paras/data_train.json"
+    path_original_dev   = f"{args.init_path}/DFGN/backup_files/select_paras/data_dev.json"
+
+    ## Original files là những file đã trải qua quá trình inference
+    ## bởi model Paras Selector
+    path_selected_train = ""
+    path_selected_dev   = ""
 
     ## Check file existence first
     for path_ in [path_original_train, path_original_dev,
-                  path_saved_train, path_saved_dev]:
+                  path_selected_train, path_selected_dev]:
         if not check_file_existence(path_):
             logging.error(f"Err: File {path_} not found.")
             raise FileNotFoundError
@@ -67,8 +58,8 @@ def encode_query_context(threshold: float):
         original_train  = json.load(dat1_file)
         original_dev    = json.load(dat2_file)
 
-    saved_train     = pd.DataFrame(load_object(path_saved_train))
-    saved_dev       = pd.DataFrame(load_object(path_saved_dev))
+    saved_train     = pd.DataFrame(load_object(path_selected_train))
+    saved_dev       = pd.DataFrame(load_object(path_selected_dev))
 
     ## Loop entire original datasets (original_train, original_dev)
     ## filter
@@ -97,10 +88,10 @@ def encode_query_context(threshold: float):
                 '_id'       : datapoint['_id'],
                 'c_plain'   : context,
                 'c_word'    : sentence2tokens(context),
-                'c_char'    : None,
+                'c_char'    : sentence2chars(context),
                 'q_plain'   : datapoint['question'],
                 'q_word'    : sentence2tokens(datapoint['question']),
-                'q_char'    : None,
+                'q_char'    : sentence2chars(datapoint['question']),
                 'answer'    : datapoint['answer']
             })
 
