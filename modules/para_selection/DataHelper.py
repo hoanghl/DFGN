@@ -4,6 +4,7 @@ import threading
 import json
 import sys
 import re
+import os
 
 from torch.utils.data import Dataset, random_split
 from transformers import BertTokenizer
@@ -12,7 +13,7 @@ import spacy
 import torch
 
 from modules.utils import save_object, check_file_existence, ParallelHelper
-from configs import args, logging
+from configs import args, logging, configs
 
 if args.working_place != "local":
     torch.multiprocessing.set_sharing_strategy('file_system')
@@ -46,8 +47,8 @@ class PreprocessingHelper:
         ##############################
         ### Truncating and Padding
         ##############################
-        tokens = [TOKEN_INIT] + tokens[:args.max_seq_length - 2] + [TOKEN_SEP]
-        tokens.extend([BERT_tokenizer.pad_token_id for _ in range(args.max_seq_length - len(tokens))])
+        tokens = [TOKEN_INIT] + tokens[:configs['MAX_SEQ_LEN_W'] - 2] + [TOKEN_SEP]
+        tokens.extend([BERT_tokenizer.pad_token_id for _ in range(configs['MAX_SEQ_LEN_W'] - len(tokens))])
 
         ##############################
         ### Create attention mask
@@ -174,7 +175,13 @@ def generate_train_datasets():
             for thread_ in threads:
                 thread_.join()
 
-            with open(f"backup_files/select_paras/{store_file}", "w+") as res_file:
+            ### Save what has been processed into JSON file
+            path = f"backup_files/select_paras/{store_file}"
+            try:
+                os.makedirs(os.path.dirname(path))
+            except FileExistsError:
+                logging.warning(f"=> Folder {os.path.dirname(path)} exists.")
+            with open(path, "w+") as res_file:
                 json.dump(samples, res_file, ensure_ascii=False, indent=2)
 
     else:

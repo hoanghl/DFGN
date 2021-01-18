@@ -119,11 +119,13 @@ class Para_Selector:
 
         for batch in tqdm(iterator_train):
             src             = concat_tensor(batch['sentence']).to(args.device)
+            input_masks     = concat_tensor(batch['attn_mask']).to(args.device)
             trg             = batch['score'].to(args.device)
 
             optimizer.zero_grad()
 
-            outputs         = model(src, labels=trg, return_dict=True)
+            outputs         = model(src, labels=trg, token_type_ids=None,
+                                    attention_mask=input_masks, return_dict=True)
 
             loss            = outputs.loss
             accuracy        = self.cal_accuracy(outputs.logits, trg)
@@ -151,9 +153,11 @@ class Para_Selector:
         with torch.no_grad():
             for batch in tqdm(iterator_dev):
                 src             = concat_tensor(batch['sentence']).to(args.device)
+                input_masks     = concat_tensor(batch['attn_mask']).to(args.device)
                 trg             = batch['score'].to(args.device)
 
-                outputs         = model(src, labels=trg, return_dict=True)
+                outputs         = model(src, labels=trg, token_type_ids=None,
+                                        attention_mask=input_masks, return_dict=True)
 
                 loss            = outputs.loss
                 accuracy        = self.cal_accuracy(outputs.logits, trg)

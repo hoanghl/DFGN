@@ -76,7 +76,7 @@ class ParallelHelper:
         self.n_data = len(data)
 
         self.queue  = multiprocessing.Queue()
-        # self.pbar   = tqdm(total=self.n_data)
+        self.pbar   = tqdm(total=self.n_data)
 
         self.jobs = list()
         for ith in range(n_cores):
@@ -106,11 +106,10 @@ class ParallelHelper:
             while not self.queue.empty():
                 dataset.append(self.queue.get())
                 cnt += 1
-                print(f"{cnt} - {sys.getsizeof(dataset)}")
 
-                # self.pbar.update()
+                self.pbar.update()
 
-        # self.pbar.close()
+        self.pbar.close()
 
         for job in self.jobs:
             job.join()
