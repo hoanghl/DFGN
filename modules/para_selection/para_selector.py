@@ -47,7 +47,7 @@ class Para_Selector:
         logging.info("=> Successfully load data and create iterators")
 
         ## Prepare model
-        model = BertForSequenceClassification.from_pretrained(BERT_PATH) \
+        model = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(BERT_PATH)) \
             .to(args.device)
         optimizer = torch_optim.Adam(model.parameters())
 

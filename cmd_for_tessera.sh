@@ -53,7 +53,7 @@ echo "2. Do main work"
 cd $PROJECT_NAME || return
 
 ## Enter the code you want to run here
-python -m modules.para_selection.para_selector --batch_size 5 --working_place $WORKING_PLACE --task selectparas_train
+CUDA_VISIBLE_DEVICES=0,1 python -m modules.para_selection.para_selector --batch_size 16 --working_place $WORKING_PLACE --task selectparas_train --n_cpus 4
 
 echo "3. Wrap up everything"
 tar -czvf $PROJECT_NAME.tar.gz $PROJECT_NAME

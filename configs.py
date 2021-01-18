@@ -37,7 +37,7 @@ if args.working_place == "local":
 elif args.working_place == "rtx":
     args.init_path  = "/home/ubuntu/projects"
 elif args.working_place == "dgx":
-    args.init_path  = "/home/ubuntu"
+    args.init_path  = "/root"
 elif args.working_place == "local2":
     args.init_path = "/home/tommy/Projects/VinAI"
 else:
