@@ -23,9 +23,9 @@ BERT_TOKENIZER  = f"{args.init_path}/_pretrained/BERT/{args.bert_model}-vocab.tx
 BERT_tokenizer  = BertTokenizer.from_pretrained(BERT_PATH, local_files_only=False)
 nlp             = spacy.load("en_core_web_sm")
 
-TOKEN_INIT      = BERT_tokenizer.cls_token
-TOKEN_SEP       = BERT_tokenizer.sep_token
-TOKEN_PAD       = BERT_tokenizer.pad_token
+TOKEN_INIT      = BERT_tokenizer.cls_token_id
+TOKEN_SEP       = BERT_tokenizer.sep_token_id
+TOKEN_PAD       = BERT_tokenizer.pad_token_id
 
 RATIO_TRAIN_TEST = 0.8
 
@@ -33,12 +33,8 @@ RATIO_TRAIN_TEST = 0.8
 class PreprocessingHelper:
     def __init__(self, data_point):
         ##############################
-        ### Preprocess data
-        ##############################
-        ### Add necessary characters into text
-        data_point['sentence'] = TOKEN_INIT + data_point['sentence'] + TOKEN_SEP
-
         ### Tokenization
+        ##############################
         tokens = self.tokenizer(data_point['sentence'])
 
 
@@ -50,17 +46,19 @@ class PreprocessingHelper:
         ##############################
         ### Truncating and Padding
         ##############################
-        tokens = tokens[:args.max_seq_length]
+        tokens = [TOKEN_INIT] + tokens[:args.max_seq_length - 2] + [TOKEN_SEP]
         tokens.extend([BERT_tokenizer.pad_token_id for _ in range(args.max_seq_length - len(tokens))])
 
+        ##############################
+        ### Create attention mask
+        ##############################
+        attn_mask = [int(tok > 0) for tok in tokens]
 
         self.preprocessed_datapoint = {
             '_id'           : data_point['_id'],
             '_id_context'   : data_point['_id_context'],
-            ## BUG: Error occurs by 2 lines below.
-            # 'sentence'      : torch.FloatTensor(tokens),
-            # 'score'         : torch.FloatTensor(data_point['score'])
             'sentence'      : tokens,
+            'attn_mask'     : attn_mask,
             'score'         : data_point['score']
         }
 
