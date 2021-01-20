@@ -38,8 +38,8 @@ def encode_query_context(threshold: float):
     ## to form data points
     ###################################
     ## Original files là những file dùng để feed vào model Paras Selector
-    path_original_train = f"{args.init_path}/DFGN/backup_files/select_paras/data_train.json"
-    path_original_dev   = f"{args.init_path}/DFGN/backup_files/select_paras/data_dev.json"
+    path_original_train = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/data_train.json"
+    path_original_dev   = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/data_dev.json"
 
     ## Original files là những file đã trải qua quá trình inference
     ## bởi model Paras Selector
@@ -101,8 +101,8 @@ def encode_query_context(threshold: float):
     dataset_dev     = get_data_for_encoding(original_dev, saved_dev)
 
     ## Back up 2 files 'dataset_train' and 'dataset_dev'
-    save_object("./backup_files/encoding/dataset_train.pkl.gz", dataset_train)
-    save_object("./backup_files/encoding/dataset_dev.pkl.gz", dataset_dev)
+    save_object(f"{args.init_path}/_data/QA/HotpotQA/backup_files/encoding/dataset_train.pkl.gz", dataset_train)
+    save_object(f"{args.init_path}/_data/QA/HotpotQA/backup_files/encoding/dataset_dev.pkl.gz", dataset_dev)
 
 
     ###################################

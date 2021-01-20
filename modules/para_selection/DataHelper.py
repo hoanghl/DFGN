@@ -104,8 +104,8 @@ def generate_train_datasets():
     JSON dataset files
     """
 
-    path_data_train = "backup_files/select_paras/data_train.json"
-    path_data_dev   = "backup_files/select_paras/data_dev.json"
+    path_data_train = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/data_train.json"
+    path_data_dev   = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/data_dev.json"
 
     ###################
     ## Check whether files "data_dev.json" and "data_train.json"
@@ -176,7 +176,7 @@ def generate_train_datasets():
                 thread_.join()
 
             ### Save what has been processed into JSON file
-            path = f"backup_files/select_paras/{store_file}"
+            path = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/{store_file}"
             try:
                 os.makedirs(os.path.dirname(path))
             except FileExistsError:
@@ -227,8 +227,8 @@ def generate_train_datasets():
         dataset_train, dataset_test = random_split(dataset_train, [length_train, length_test])
 
         ### Back up pickle file
-        save_object("./backup_files/select_paras/dataset_train.pkl.gz", dataset_train)
-        save_object("./backup_files/select_paras/dataset_test.pkl.gz", dataset_test)
+        save_object(f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/dataset_train.pkl.gz", dataset_train)
+        save_object(f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/dataset_test.pkl.gz", dataset_test)
         logging.info("Successfully store into pickle files.")
 
 

@@ -1,13 +1,15 @@
 import logging
+import os
 
-from transformers import BertForSequenceClassification
+from transformers import BertForSequenceClassification, AdamW,\
+                         get_linear_schedule_with_warmup
 from torch.utils.data import DataLoader
 import torch.nn.functional as torch_f
-import torch.optim as torch_optim
 from tqdm import tqdm
 import torch
 
-from modules.utils import load_object, save_object
+from modules.para_selection.DataHelper import CustomizedDataset
+from modules.utils import load_object, save_object, check_file_existence
 from modules.encoding.utils import concat_tensor
 from configs import args
 
@@ -21,6 +23,16 @@ class Para_Selector:
     """
     This class serves training, storing trained model, things related to training, inference
     """
+
+    def __init__(self):
+        self.path_saved_model    = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/paras_select.pt"
+
+        self.path_data_train     = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/dataset_train.pkl.gz"
+        self.path_data_dev       = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/dataset_dev.pkl.gz"
+        self.path_data_test      = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/dataset_test.pkl.gz"
+
+        self.path_inferred_train = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/score_data_train.pkl.gz"
+        self.path_inferred_dev   = f"{args.init_path}/_data/QA/HotpotQA/backup_files/select_paras/score_data_dev.pkl.gz"
 
     ##################################################
     # Methods serving training purpose
@@ -36,20 +48,28 @@ class Para_Selector:
         logging.info("1. Prepare data and model")
 
         ## Load data
-        path_data_train = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_train.pkl.gz"
-        path_data_dev   = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_dev.pkl.gz"
-        path_data_test  = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_test.pkl.gz"
+
 
         ## Create iterator for each dataset
-        iterator_train  = self.get_iterator(path_data_train)
-        iterator_dev    = self.get_iterator(path_data_dev)
-        iterator_test   = self.get_iterator(path_data_test)
+        iterator_train  = self.get_iterator(self.path_data_train)
+        iterator_dev    = self.get_iterator(self.path_data_dev)
+        iterator_test   = self.get_iterator(self.path_data_test)
         logging.info("=> Successfully load data and create iterators")
 
         ## Prepare model
-        model = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(BERT_PATH)) \
-            .to(args.device)
-        optimizer = torch_optim.Adam(model.parameters())
+        if torch.cuda.device_count() > 1:
+            model           = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(BERT_PATH))\
+                .to(args.device)
+        else:
+            model = BertForSequenceClassification.from_pretrained(BERT_PATH).to(args.device)
+        ## Check if model's save instance is available, load it
+        model           = self.load_model(model)
+
+        optimizer       = AdamW(model.parameters(),
+                                lr=2e-5, eps=1e-8)
+        total_steps     = len(iterator_train) * args.n_epochs
+        scheduler       = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0,
+                                                          num_training_steps=total_steps)
 
         logging.info("=> Successfully create model")
 
@@ -61,16 +81,23 @@ class Para_Selector:
 
         best_accuracy = -10e10
         for nth_epoch in range(args.n_epochs):
-            ### Traing and evaluate
-            train_loss, train_accuracy  = self.train(model, iterator_train, optimizer)
+            ### Train and evaluate
+            logging.info(f"== Epoch: {nth_epoch+1:3d}")
+            logging.info(f"=== Training")
+            train_loss, train_accuracy  = self.train(model, iterator_train, optimizer, scheduler)
+            logging.info(f"=== Evaluating")
             eval_loss, eval_accuracy    = self.evaluate(model, iterator_dev)
 
+
             logging.info("| n_epoch : {:3d} | train : loss {:6.3f} accu {:6.3f} | eval : loss {:6.3f} accu {:6.3f} |"
-                         .format(nth_epoch, train_loss, train_accuracy, eval_loss, eval_accuracy))
+                         .format(nth_epoch+1, train_loss, train_accuracy, eval_loss, eval_accuracy))
 
             ### Store model if yield better result
             if best_accuracy < eval_accuracy:
+                best_accuracy = eval_accuracy
                 self.save_model(model)
+
+                logging.info("Successfully save model")
 
 
         logging.info("=> Training finishes.")
@@ -90,7 +117,7 @@ class Para_Selector:
         ##################################
         logging.info("4. Store model")
 
-        torch.save(model.state_dict(), "./backup_files/select_paras/paras_selector.pt")
+        torch.save(model.state_dict(), self.path_saved_model)
 
     def cal_accuracy(self, logist, target):
         """
@@ -111,12 +138,10 @@ class Para_Selector:
 
         return correct.sum() / len(correct)
 
-    def train(self, model, iterator_train, optimizer):
+    def train(self, model, iterator_train, optimizer, scheduler):
         model.train()
 
         accum_loss, accum_accuracy = 0, 0
-
-
         for batch in tqdm(iterator_train):
             src             = concat_tensor(batch['sentence']).to(args.device)
             input_masks     = concat_tensor(batch['attn_mask']).to(args.device)
@@ -127,13 +152,12 @@ class Para_Selector:
             outputs         = model(src, labels=trg, token_type_ids=None,
                                     attention_mask=input_masks, return_dict=True)
 
-            loss            = outputs.loss
+            loss            = outputs.loss.mean()
             accuracy        = self.cal_accuracy(outputs.logits, trg)
 
-
-            loss.sum().backward()
+            loss.backward()
             optimizer.step()
-
+            scheduler.step()
 
             accum_loss      += loss
             accum_accuracy  += accuracy
@@ -159,7 +183,7 @@ class Para_Selector:
                 outputs         = model(src, labels=trg, token_type_ids=None,
                                         attention_mask=input_masks, return_dict=True)
 
-                loss            = outputs.loss
+                loss            = outputs.loss.mean()
                 accuracy        = self.cal_accuracy(outputs.logits, trg)
 
 
@@ -174,20 +198,26 @@ class Para_Selector:
         :param model: Pytorch model
         """
 
-        path_model = f"{args.init_path}/backup_files/select_paras/paras_select.pt"
+        ## Check if folder existed, otherwise create
+        try:
+            os.makedirs(os.path.dirname(self.path_saved_model))
+        except FileExistsError:
+            ## If reach here, folder(s) is created
+            pass
 
-        torch.save(model.state_dict(), path_model)
+        torch.save(model.state_dict(), self.path_saved_model)
 
     def get_iterator(self, path):
         dataset = [
             {
                 'sentence'  : data_point['sentence'],
+                'attn_mask' : data_point['attn_mask'],
                 'score'     : data_point['score'],
             }
             for data_point in load_object(path)
         ]
 
-        return DataLoader(dataset, batch_size=args.batch_size, num_workers=0)
+        return DataLoader(dataset, batch_size=args.batch_size, num_workers=args.n_cpus)
 
 
     ##################################################
@@ -201,40 +231,42 @@ class Para_Selector:
         ## 1. Read 3 files 'dataset_.pkl.gz' and
         ## reconstruct DataLoader from those
         ##################################
-        logging.info("1. Prepare data and model")
+        logging.info("1. Prepare data")
 
-        ## Load data
-        path_data_train = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_train.pkl.gz"
-        path_data_dev   = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_dev.pkl.gz"
-        path_data_test  = f"{args.init_path}/DFGN/backup_files/select_paras/dataset_test.pkl.gz"
 
-        ## Create iterator for each dataset
-        iterator_train  = self.get_iterator(path_data_train)
-        iterator_dev    = self.get_iterator(path_data_dev)
-        iterator_test   = self.get_iterator(path_data_test)
+        ## Load data and create iterator for each dataset
+        iterator_train  = self.get_iterator(self.path_data_train)
+        iterator_dev    = self.get_iterator(self.path_data_dev)
+        iterator_test   = self.get_iterator(self.path_data_test)
         logging.info("=> Successfully load data and create iterators")
 
 
         ##################################
         ## 2. Load model
         ##################################
+        logging.info("2. Prepare model")
         model = BertForSequenceClassification.from_pretrained(BERT_PATH) \
             .to(args.device)
-        model.load_state_dict(torch.load("./backup_files/select_paras/paras_selector.pt"))
+        model = self.load_model(model)
 
 
         ##################################
         ## 3. Start inferring and store data
         ##################################
-        selected_data_train = self.inference(model, iterator_train)
-        selected_data_train.extend(self.inference(model, iterator_test))
+        logging.info("3. Start inferring")
 
-        selected_data_dev   = self.inference(model, iterator_dev)
+        logging.info("=> Infer training data")
+        inferred_data_train = self.inference(model, iterator_train)
+        inferred_data_train.extend(self.inference(model, iterator_test))
 
-        save_object("./backup_files/select_paras/selected_data_train.pkl.gz",
-                    selected_data_train)
-        save_object("./backup_files/select_paras/selected_data_dev.pkl.gz",
-                    selected_data_dev)
+        logging.info("=> Infer dev data")
+        inferred_data_dev   = self.inference(model, iterator_dev)
+
+
+        save_object(self.path_inferred_train, inferred_data_train)
+        save_object(self.path_inferred_dev, inferred_data_dev)
+        logging.info("Successfully save inferred data.")
+
 
     def inference(self, model, iterator_inference):
         ## Following variable contains question and c
@@ -243,16 +275,20 @@ class Para_Selector:
         model.eval()
 
         with torch.no_grad():
-            for batch in iterator_inference:
-                src = batch['sentence'].to(args.device)
+            for batch in tqdm(iterator_inference):
+                src         = concat_tensor(batch['sentence']).to(args.device)
+                input_masks = concat_tensor(batch['attn_mask']).to(args.device)
+                trg         = batch['score'].to(args.device)
 
-                logits = model(src, labels=None, return_dict=True).logits
+                outputs     = model(src, labels=trg, token_type_ids=None,
+                                    attention_mask=input_masks, return_dict=True)
+
+                logits      = outputs.logits
 
                 ### Convert logits value to usable ones
-                scores = torch_f.softmax(logits, dim=1)[:, 0]
+                scores      = torch_f.softmax(logits, dim=1)[:, 0]
 
                 ### Save to 'results'
-
                 for datapoint, score in zip(batch, scores):
                     results.append({
                         '_id'           : datapoint['_id'],
@@ -261,6 +297,23 @@ class Para_Selector:
                     })
 
         return results
+
+    def load_model(self, model: torch.nn.Module) -> torch.nn.Module:
+        """
+        Load model from path
+
+        Args:
+            model (object): model to be load from saved instance if existed
+
+        Returns:
+            model even loaded or not
+        """
+
+        if check_file_existence(self.path_saved_model):
+            logging.info("=> Saved model instance existed. Load it.")
+            model.load_state_dict(torch.load(self.path_saved_model))
+
+        return model
 
 
 if __name__ == '__main__':

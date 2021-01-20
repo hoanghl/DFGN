@@ -2,9 +2,11 @@
 ## Template created by Hoang Le
 ## Dec 2, 2020
 
+## NOTE: All code below is dedicated for running in Tesssera.
+
 
 WORKING_PLACE="dgx"
-CONDA_ENV_NAME="pytorch"
+CONDA_ENV_NAME="pytorch_cuda11"
 PROJECT_NAME="DFGN"
 DATA_FILE="data/QA/HotpotQA.tar.gz"
 PRETRAINED_FILE="pretrained/BERT.tar.gz"
@@ -50,11 +52,13 @@ tar -xzvf $INIT_PATH_ISILON/$PROJECT_NAME.tar.gz -C .
 
 
 echo "2. Do main work"
+## Clone code from git
+git clone --single-branch --branch dev https://github.com/tommyjohn1001/DFGN\
+
 cd $PROJECT_NAME || return
+CUDA_VISIBLE_DEVICES=0,1 python -m modules.para_selection.para_selector --batch_size 16 --working_place $WORKING_PLACE --task selectparas_train
 
-## Enter the code you want to run here
-CUDA_VISIBLE_DEVICES=0,1 python -m modules.para_selection.para_selector --batch_size 16 --working_place $WORKING_PLACE --task selectparas_train --n_cpus 4
-
-echo "3. Wrap up everything"
-tar -czvf $PROJECT_NAME.tar.gz $PROJECT_NAME
+echo "3. Wrap up data only"
+cd ..
+tar -czvf HotpotQA.tar.gz $DATA_FILE
 mv $PROJECT_NAME.tar.gz $INIT_PATH_ISILON/$PROJECT_NAME.tar.gz
