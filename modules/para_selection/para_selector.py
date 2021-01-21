@@ -58,10 +58,18 @@ class Para_Selector:
 
         ## Prepare model
         if torch.cuda.device_count() > 1:
-            model           = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(BERT_PATH))\
-                .to(args.device)
+            try:
+                model           = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(BERT_PATH))\
+                    .to(args.device)
+            except OSError:
+                model = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(args.bert_model)) \
+                    .to(args.device)
         else:
-            model = BertForSequenceClassification.from_pretrained(BERT_PATH).to(args.device)
+            try:
+                model = BertForSequenceClassification.from_pretrained(BERT_PATH).to(args.device)
+            except OSError:
+                model = BertForSequenceClassification.from_pretrained(args.bert_model).to(args.device)
+
         ## Check if model's save instance is available, load it
         model           = self.load_model(model)
 
@@ -245,8 +253,13 @@ class Para_Selector:
         ## 2. Load model
         ##################################
         logging.info("2. Prepare model")
-        model = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(BERT_PATH)) \
-            .to(args.device)
+        try:
+            model = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(BERT_PATH)) \
+                .to(args.device)
+        except OSError:
+            model = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(args.bert_model)) \
+                .to(args.device)
+
         model = self.load_model(model)
 
 
