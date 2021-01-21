@@ -23,7 +23,7 @@ def load_object(path) -> object:
     """
 
     if not os.path.isfile(path):
-        raise FileNotFoundError
+        logging.error(f"Path {path} not found.")
 
     with gzip.open(path, 'r') as dat_file:
         return pickle.load(dat_file)

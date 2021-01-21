@@ -245,7 +245,7 @@ class Para_Selector:
         ## 2. Load model
         ##################################
         logging.info("2. Prepare model")
-        model = BertForSequenceClassification.from_pretrained(BERT_PATH) \
+        model = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(BERT_PATH)) \
             .to(args.device)
         model = self.load_model(model)
 

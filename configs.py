@@ -35,7 +35,7 @@ args, _ = parser.parse_known_args()
 if args.working_place == "local":
     args.init_path  = "/Users/hoangle/Projects/VinAI"
 elif args.working_place == "rtx":
-    args.init_path  = "/home/ubuntu/projects"
+    args.init_path  = "/home/ubuntu"
 elif args.working_place == "dgx":
     args.init_path  = "/root"
 elif args.working_place == "local2":

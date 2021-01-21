@@ -32,7 +32,7 @@ echo "Start time   :" $NOW
 ## By default, pwd is "/root"
 echo "0. Do some miscellaneous things"
 echo "0.1. Create working directory"
-mkdir -p _data
+mkdir -p _data/QA
 mkdir -p _pretrained
 
 echo "0.2. Activate conda and environment"
@@ -44,21 +44,19 @@ echo "1. Extract stuffs from Isilon"
 ## By default, data in Isilon is mounted at "$INIT_PATH_ISILON/"
 
 echo "1.1. Extract data"
-tar -xzvf $INIT_PATH_ISILON/"$DATA_FILE" -C _data
+tar -xzvf $INIT_PATH_ISILON/"$DATA_FILE" -C _data/QA
 echo "1.2. Extract pretrained models such as BERT, GloVe..."
 tar -xzvf $INIT_PATH_ISILON/"$PRETRAINED_FILE" -C _pretrained
-echo "1.3. Extract previous work(s)"
-tar -xzvf $INIT_PATH_ISILON/$PROJECT_NAME.tar.gz -C .
 
 
 echo "2. Do main work"
 ## Clone code from git
-git clone --single-branch --branch dev https://github.com/tommyjohn1001/DFGN\
+git clone --single-branch --branch dev https://github.com/tommyjohn1001/DFGN
 
 cd $PROJECT_NAME || return
-CUDA_VISIBLE_DEVICES=0,1 python -m modules.para_selection.para_selector --batch_size 16 --working_place $WORKING_PLACE --task selectparas_train
+CUDA_VISIBLE_DEVICES=0 python -m modules.para_selection.para_selector --batch_size 32 --working_place $WORKING_PLACE --task selectparas_inference
 
 echo "3. Wrap up data only"
 cd ..
 tar -czvf HotpotQA.tar.gz $DATA_FILE
-mv $PROJECT_NAME.tar.gz $INIT_PATH_ISILON/$PROJECT_NAME.tar.gz
+mv HotpotQA.tar.gz $INIT_PATH_ISILON/$DATA_FILE
