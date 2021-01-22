@@ -281,9 +281,8 @@ class Para_Selector:
             for batch in tqdm(iterator_inference):
                 src         = concat_tensor(batch['sentence']).to(args.device)
                 input_masks = concat_tensor(batch['attn_mask']).to(args.device)
-                trg         = batch['score'].to(args.device)
 
-                outputs     = model(src, labels=trg, token_type_ids=None,
+                outputs     = model(src, token_type_ids=None,
                                     attention_mask=input_masks, return_dict=True)
 
                 logits      = outputs.logits
@@ -324,6 +323,7 @@ class Para_Selector:
             {
                 'sentence'      : data_point['sentence'],
                 'attn_mask'     : data_point['attn_mask'],
+                'score'         : data_point['score'],
                 '_id'           : data_point['score'],
                 '_id_context'   : data_point['_id_context']
             }
