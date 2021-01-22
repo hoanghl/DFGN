@@ -54,9 +54,15 @@ echo "2. Do main work"
 git clone --single-branch --branch dev https://github.com/tommyjohn1001/DFGN
 
 cd $PROJECT_NAME || return
-CUDA_VISIBLE_DEVICES=0 python -m modules.para_selection.para_selector --batch_size 32 --working_place $WORKING_PLACE --task selectparas_inference || return
+CUDA_VISIBLE_DEVICES=0,1 python -m modules.para_selection.para_selector --batch_size 32 --working_place $WORKING_PLACE --task selectparas_inference || return
 
 echo "3. Wrap up data only"
 cd ..
 tar -czvf HotpotQA.tar.gz $DATA_FILE
 mv HotpotQA.tar.gz $INIT_PATH_ISILON/$DATA_FILE
+
+echo "=============================="
+echo "=====+=END OF RUNNING========="
+echo "Working place:" $WORKING_PLACE
+NOW=$(date +"%b-%d-%Y %r")
+echo "END time   :" $NOW

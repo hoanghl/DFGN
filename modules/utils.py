@@ -6,9 +6,6 @@ import os
 
 from tqdm import tqdm
 
-logging.basicConfig(format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-logging.getLogger().setLevel(logging.INFO)
-
 
 ########################################################
 # Functions to deal with `pkl` files
@@ -101,7 +98,6 @@ class ParallelHelper:
             job.start()
 
         cnt = 0
-        import sys
         while cnt < self.n_data:
             while not self.queue.empty():
                 dataset.append(self.queue.get())

@@ -1,9 +1,9 @@
-'''
-This file processes arguments and configs
-'''
+"""This file processes arguments and configs"""
+
 import argparse
 import logging
 import sys
+import os
 
 import torch
 
@@ -45,8 +45,9 @@ else:
     sys.exit(1)
 
 ## args = bert_model
-if args.bert_model == "":
-    args.bert_model = f"{args.init_path}/_pretrained/BERT/bert-base-uncased/"
+path = f"{args.init_path}/_pretrained/BERT/{args.bert_model}/"
+if os.path.exists(path):
+    args.bert_model = path
 
 ## args = device
 if args.device == "default":
@@ -67,10 +68,12 @@ logging.getLogger().setLevel(logging.INFO)
 ###############################
 configs = {
     ## threshold used to select golden passages
-    'DELTA' : 0.1,
+    'DELTA'             : 0.1,
 
     ## maximum number of characters to be tokenized
-    'MAX_SEQ_LEN_CH': 1024,
+    'MAX_SEQ_LEN_CH'    : 1024,
     ## maximum number of words to be tokenized
-    'MAX_SEQ_LEN_W': 512,
+    'MAX_SEQ_LEN_W'     : 512,
+
+    'MULTI_GPUS'        : True if torch.cuda.device_count() > 0 else False
 }

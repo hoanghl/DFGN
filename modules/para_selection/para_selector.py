@@ -11,7 +11,7 @@ import torch
 from modules.para_selection.DataHelper import CustomizedDataset
 from modules.utils import load_object, save_object, check_file_existence
 from modules.encoding.utils import concat_tensor
-from configs import args
+from configs import args, configs
 
 logging.basicConfig(format='%(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logging.getLogger().setLevel(logging.INFO)
@@ -47,9 +47,6 @@ class Para_Selector:
         ##################################
         logging.info("1. Prepare data and model")
 
-        ## Load data
-
-
         ## Create iterator for each dataset
         iterator_train  = self.get_iterator(self.path_data_train)
         iterator_dev    = self.get_iterator(self.path_data_dev)
@@ -57,18 +54,10 @@ class Para_Selector:
         logging.info("=> Successfully load data and create iterators")
 
         ## Prepare model
-        if torch.cuda.device_count() > 1:
-            try:
-                model           = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(BERT_PATH))\
-                    .to(args.device)
-            except OSError:
-                model = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(args.bert_model)) \
-                    .to(args.device)
-        else:
-            try:
-                model = BertForSequenceClassification.from_pretrained(BERT_PATH).to(args.device)
-            except OSError:
-                model = BertForSequenceClassification.from_pretrained(args.bert_model).to(args.device)
+        model = BertForSequenceClassification.from_pretrained(args.bert_model)
+        if configs['MULTI_GPUS']:
+            model   = torch.nn.DataParallel(model)
+        model = model.to(args.device)
 
         ## Check if model's save instance is available, load it
         model           = self.load_model(model)
@@ -253,12 +242,12 @@ class Para_Selector:
         ## 2. Load model
         ##################################
         logging.info("2. Prepare model")
-        try:
-            model = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(BERT_PATH)) \
-                .to(args.device)
-        except OSError:
-            model = torch.nn.DataParallel(BertForSequenceClassification.from_pretrained(args.bert_model)) \
-                .to(args.device)
+
+        model = BertForSequenceClassification.from_pretrained(args.bert_model)
+        if configs['MULTI_GPUS']:
+            model = torch.nn.DataParallel(model)
+        model = model.to(args.device)
+
 
         model = self.load_model(model)
 

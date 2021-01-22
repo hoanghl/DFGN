@@ -2,6 +2,11 @@
 
 ### This file contains changes and modifications during developing.
 
+## Jan 21, 2021, 14:27
+- Thay đổi cách xử lí `bert-path` trong file `configs.py` - nếu kiểm tra không thấy 
+- Thêm phần kiểm tra multi GPU để dùng `DataParallel` trong `para_selector.py` 
+
+
 ## Jan 20, 2021, 14:50
 - Thay đổi lại nơi lưu các file tạo ra trong quá trình chạy từ `./backup_files` sang folder lưu data chung `_data/QA/HotpotQA/backup_files`. Việc này nhằm đưa data (cả dataset và các file trong quá trình xử lí) ra khỏi code folder.
 - Thay đổi optimizer của Paras Selector từ optimizer chuẩn của `torch` sang `AdamW` của `huggingface`
