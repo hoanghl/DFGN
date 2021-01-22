@@ -13,7 +13,10 @@ from configs import args, configs
 BERT_PATH       = f"{args.init_path}/_pretrained/BERT/{args.bert_model}/"
 BERT_TOKENIZER  = f"{args.init_path}/_pretrained/BERT/{args.bert_model}-vocab.txt"
 
-BERT_tokenizer  = BertTokenizer.from_pretrained(BERT_PATH, local_files_only=False)
+try:
+    BERT_tokenizer = BertTokenizer.from_pretrained(BERT_PATH, local_files_only=False)
+except OSError:
+    BERT_tokenizer = BertTokenizer.from_pretrained(args.bert_model)
 nlp             = spacy.load("en_core_web_sm")
 
 
@@ -29,7 +32,7 @@ def get_entities_from_context(context: str) -> list:
     import re
     import stanza
 
-    def clean_entity(entity:str) -> str:
+    def clean_entity(entity: str) -> str:
         """
         Clean 'entity'
         :param entity: entity to be cleaned
