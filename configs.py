@@ -13,7 +13,7 @@ import torch
 ###############################
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--working_place", choices=['local', 'rtx', 'dgx'],
+parser.add_argument("--working_place", choices=['local', 'remote', 'local2'],
                     help="working environment", default='local')
 parser.add_argument("--batch_size", type=int, default=1)
 parser.add_argument("--n_cpus", type=int, default=4)
@@ -34,10 +34,8 @@ args, _ = parser.parse_known_args()
 ## args = working_place
 if args.working_place == "local":
     args.init_path  = "/Users/hoangle/Projects/VinAI"
-elif args.working_place == "rtx":
+elif args.working_place == "remote":
     args.init_path  = "/home/ubuntu"
-elif args.working_place == "dgx":
-    args.init_path  = "/root"
 elif args.working_place == "local2":
     args.init_path = "/home/tommy/Projects/VinAI"
 else:

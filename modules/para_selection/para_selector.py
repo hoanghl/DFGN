@@ -3,7 +3,7 @@ import os
 
 from transformers import BertForSequenceClassification, AdamW,\
                          get_linear_schedule_with_warmup
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 import torch.nn.functional as torch_f
 from tqdm import tqdm
 import torch
@@ -48,9 +48,9 @@ class Para_Selector:
         logging.info("1. Prepare data and model")
 
         ## Create iterator for each dataset
-        iterator_train  = self.get_iterator(self.path_data_train)
-        iterator_dev    = self.get_iterator(self.path_data_dev)
-        iterator_test   = self.get_iterator(self.path_data_test)
+        iterator_train  = self.get_iterator_train(self.path_data_train)
+        iterator_dev    = self.get_iterator_train(self.path_data_dev)
+        iterator_test   = self.get_iterator_train(self.path_data_test)
         logging.info("=> Successfully load data and create iterators")
 
         ## Prepare model
@@ -204,7 +204,7 @@ class Para_Selector:
 
         torch.save(model.state_dict(), self.path_saved_model)
 
-    def get_iterator(self, path):
+    def get_iterator_train(self, path):
         dataset = [
             {
                 'sentence'  : data_point['sentence'],
@@ -214,7 +214,8 @@ class Para_Selector:
             for data_point in load_object(path)
         ]
 
-        return DataLoader(dataset, batch_size=args.batch_size, num_workers=args.n_cpus)
+        return DataLoader(dataset, batch_size=args.batch_size,
+                          num_workers=args.n_cpus, shuffle=True)
 
 
     ##################################################
@@ -232,9 +233,9 @@ class Para_Selector:
 
 
         ## Load data and create iterator for each dataset
-        iterator_train  = self.get_iterator(self.path_data_train)
-        iterator_dev    = self.get_iterator(self.path_data_dev)
-        iterator_test   = self.get_iterator(self.path_data_test)
+        iterator_train  = self.get_iterator_inference(self.path_data_train)
+        iterator_dev    = self.get_iterator_inference(self.path_data_dev)
+        iterator_test   = self.get_iterator_inference(self.path_data_test)
         logging.info("=> Successfully load data and create iterators")
 
 
@@ -300,6 +301,7 @@ class Para_Selector:
 
         return results
 
+
     def load_model(self, model: torch.nn.Module) -> torch.nn.Module:
         """
         Load model from path
@@ -313,9 +315,23 @@ class Para_Selector:
 
         if check_file_existence(self.path_saved_model):
             logging.info("=> Saved model instance existed. Load it.")
-            model.load_state_dict(torch.load(self.path_saved_model))
+            model.load_state_dict(torch.load(self.path_saved_model), strict=False)
 
         return model
+
+    def get_iterator_inference(self, path):
+        dataset = [
+            {
+                'sentence'      : data_point['sentence'],
+                'attn_mask'     : data_point['attn_mask'],
+                '_id'           : data_point['score'],
+                '_id_context'   : data_point['_id_context']
+            }
+            for data_point in load_object(path)
+        ]
+
+        return DataLoader(dataset, batch_size=args.batch_size,
+                          num_workers=args.n_cpus, shuffle=True)
 
 
 if __name__ == '__main__':
