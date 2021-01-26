@@ -291,13 +291,13 @@ class Para_Selector:
                 scores      = torch_f.softmax(logits, dim=1)[:, 0]
 
                 ### Save to 'results'
-                print(f"batch: {batch}")
-                
-                for datapoint, score in zip(batch, scores):
-                    print(f"Datapoint: {datapoint}")
+                for _id, _id_context, score in zip(batch['_id'], batch['_id_context'],
+                                                   scores):
+                    print(f"_id: {_id}")
+                    print(f"_id_context: {_id_context}")
                     results.append({
-                        '_id'           : datapoint['_id'],
-                        '_id_context'   : datapoint['_id_context'],
+                        '_id'           : _id,
+                        '_id_context'   : _id_context,
                         'score'         : score
                     })
 
